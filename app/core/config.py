@@ -10,7 +10,6 @@ class Settings:
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB")
     
-    # Проверка обязательных переменных
     @property
     def DATABASE_URL(self) -> str:
         if not self.POSTGRES_USER or not self.POSTGRES_PASSWORD or not self.POSTGRES_DB:
@@ -25,7 +24,6 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     
     def __init__(self):
-        # Проверяем наличие обязательных переменных
         required_vars = ["POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB", "SECRET_KEY"]
         missing = [var for var in required_vars if not getattr(self, var)]
         if missing:

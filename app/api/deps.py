@@ -32,17 +32,11 @@ _rate_limit_store: Dict[str, Tuple[int, float]] = {}  # ip -> (count, window_sta
 
 
 async def rate_limit_dependency(request: Request):
-    """
-    Простейший rate limiting по IP:
-    - 60 запросов в минуту.
-    - При превышении — 429 + Retry-After.
-    """
     identifier = request.client.host or "unknown"
     now = time.time()
 
     count, window_start = _rate_limit_store.get(identifier, (0, now))
 
-    # новое окно, если прошло больше минуты
     if now - window_start > RATE_LIMIT_WINDOW_SECONDS:
         count = 0
         window_start = now
@@ -52,7 +46,6 @@ async def rate_limit_dependency(request: Request):
 
     _rate_limit_store[identifier] = (count, window_start)
 
-    # сохраняем значения в request.state, чтобы потом добавить их в заголовки
     request.state.x_limit_remaining = remaining
     retry_after = 0
     if count > RATE_LIMIT_REQUESTS:
@@ -70,8 +63,6 @@ async def rate_limit_dependency(request: Request):
         )
 
 
-# ====== хэширование паролей ======
-
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
@@ -80,7 +71,6 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-# ====== JWT ======
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -99,10 +89,6 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> UserDB:
-    """
-    Берём токен из стандартной схемы HTTP Bearer.
-    Благодаря этому в Swagger появится кнопка Authorize.
-    """
     token = credentials.credentials
 
     try:

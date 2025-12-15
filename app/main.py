@@ -10,7 +10,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Task Manager API",
     version="1.0.0",
-    description="Система задач с версионностью API (v1, v2) и JWT-аутентификацией",
+    description="Система задач с версионностью API и JWT-аутентификацией",
 )
 
 app.add_middleware(

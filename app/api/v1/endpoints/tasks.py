@@ -27,7 +27,6 @@ def list_tasks(
         .order_by(TaskDB.created_at.desc())
         .all()
     )
-    # TaskV1 не содержит priority -> в v1 его как бы "нет"
     return tasks
 
 
@@ -40,7 +39,6 @@ def create_task(
     _idem = Depends(idempotency_dependency),
     _rate = Depends(deps.rate_limit_dependency),
 ):
-    # Если это повторный запрос с тем же Idempotency-Key — возвращаем сохранённый ответ
     if getattr(request.state, "idem_reused", False):
         status_code, body = request.state.idem_response
         return JSONResponse(status_code=status_code, content=body)

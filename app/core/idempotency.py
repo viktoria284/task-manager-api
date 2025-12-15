@@ -14,16 +14,10 @@ async def idempotency_dependency(
     idem_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
     current_user: UserDB = Depends(deps.get_current_user),
 ):
-    """
-    Если Idempotency-Key НЕ передан — работаем как обычный POST.
-    Если передан и для (user, path, key) уже есть ответ — вернём сохранённый.
-    """
-    # интересуемся только POST
     if request.method.upper() != "POST":
         return
 
     if not idem_key:
-        # идемпотентности нет – просто продолжаем
         request.state.idem_reused = False
         return
 
@@ -39,10 +33,6 @@ async def idempotency_dependency(
 
 
 def save_idempotent_response(request: Request, status_code: int, body: dict):
-    """
-    Сохраняем результат первого успешного POST.
-    Если ключа не было — ничего не делаем.
-    """
     if getattr(request.state, "idem_reused", False):
         return
     key = getattr(request.state, "idem_key", None)
