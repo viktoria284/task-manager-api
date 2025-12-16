@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Set
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from fastapi import Request
@@ -22,6 +22,8 @@ class TaskCreateV2(TaskCreate):
 def list_tasks_v2(
     status_filter: Optional[TaskStatus] = None,
     priority_filter: Optional[TaskPriority] = None,
+    limit: int = 20,
+    offset: int = 0,
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
     _rate = Depends(deps.rate_limit_dependency),
@@ -32,7 +34,12 @@ def list_tasks_v2(
     if priority_filter:
         q = q.filter(TaskDB.priority == priority_filter)
 
-    tasks = q.order_by(TaskDB.created_at.desc()).all()
+    tasks = (
+        q.order_by(TaskDB.created_at.desc())
+         .limit(limit)
+         .offset(offset)
+         .all()
+    )
     return tasks
 
 
@@ -64,3 +71,44 @@ def create_task_v2(
     data = TaskV2.from_orm(task).dict()
     save_idempotent_response(request, status.HTTP_201_CREATED, data)
     return data
+
+
+@router.get("/fields")
+def list_tasks_with_fields(
+    include: Optional[str] = Query(
+        default=None,
+        description="Список полей через запятую, которые нужно вернуть (например: title,status,priority)",
+    ),
+    status_filter: Optional[TaskStatus] = None,
+    priority_filter: Optional[TaskPriority] = None,
+    limit: int = 20,
+    offset: int = 0,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_user),
+    _rate = Depends(deps.rate_limit_dependency),
+):
+    q = db.query(TaskDB).filter(TaskDB.owner_id == current_user.id)
+    if status_filter:
+        q = q.filter(TaskDB.status == status_filter)
+    if priority_filter:
+        q = q.filter(TaskDB.priority == priority_filter)
+
+    tasks = (
+        q.order_by(TaskDB.created_at.desc())
+         .limit(limit)
+         .offset(offset)
+         .all()
+    )
+    
+    if not include:
+        return [TaskV2.from_orm(t).dict() for t in tasks]
+
+    requested_fields: Set[str] = {f.strip() for f in include.split(",") if f.strip()}
+
+    result = []
+    for t in tasks:
+        full = TaskV2.from_orm(t).dict()
+        partial = {k: v for k, v in full.items() if k in requested_fields}
+        result.append(partial)
+
+    return result

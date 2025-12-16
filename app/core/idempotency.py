@@ -1,6 +1,7 @@
 from typing import Dict, Tuple, Optional
 from fastapi import Request, HTTPException, status, Depends, Header
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from app.api import deps
 from app.db.models import UserDB
@@ -37,4 +38,5 @@ def save_idempotent_response(request: Request, status_code: int, body: dict):
         return
     key = getattr(request.state, "idem_key", None)
     if key:
-        _idempotency_store[key] = (status_code, body)
+        safe_body = jsonable_encoder(body)
+        _idempotency_store[key] = (status_code, safe_body)

@@ -16,17 +16,19 @@ router = APIRouter(tags=["tasks v1"], prefix="/tasks")
 
 @router.get("/", response_model=List[TaskV1])
 def list_tasks(
+    limit: int = 20,
+    offset: int = 0,
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
     _rate = Depends(deps.rate_limit_dependency),
-
 ):
-    tasks = (
+    q = (
         db.query(TaskDB)
         .filter(TaskDB.owner_id == current_user.id)
         .order_by(TaskDB.created_at.desc())
-        .all()
     )
+
+    tasks = q.limit(limit).offset(offset).all()
     return tasks
 
 
